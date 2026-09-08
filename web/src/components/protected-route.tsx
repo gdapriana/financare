@@ -1,0 +1,16 @@
+import Header from "@/components/header"
+import { useAuthStore } from "@/store/auth-store"
+import { Navigate, Outlet } from "react-router"
+
+export default function ProtectedRoute() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+  return (
+    <main className="">
+      <Header />
+      <Outlet />
+    </main>
+  )
+}

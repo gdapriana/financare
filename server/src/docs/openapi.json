@@ -1,0 +1,1060 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FinanCare API",
+    "description": "FinanCare OpenAPI 3.1 Specification — Personal Finance Management Application.\nBased on PostgreSQL schema (`server/sql/migrations/000001_initial_schema.up.sql`) and FinanCare PRD.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "FinanCare Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api",
+      "description": "API Base URL"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "Registration, login, and token session management" },
+    { "name": "Profile", "description": "User profile information and timezone preferences" },
+    { "name": "Accounts", "description": "Management of cash, bank, and e-wallet accounts" },
+    { "name": "Transactions", "description": "Income and expense ledger records" },
+    { "name": "Dashboard & Calendar", "description": "Balance summaries and daily calendar indicators" },
+    { "name": "Attachments", "description": "Management of receipt attachments and Cloudinary media assets" },
+    { "name": "System", "description": "Server and database health checks" }
+  ],
+  "paths": {
+    "/v1/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Check API and Database Health",
+        "description": "Returns application health status and PostgreSQL database connection status.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Server and Database Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "database": { "type": "string", "example": "connected" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register New User",
+        "description": "Creates a new user account with unique email, display name, and password.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "budi@example.com" },
+                  "password": { "type": "string", "minLength": 8, "example": "SuperSecret123!" },
+                  "display_name": { "type": "string", "example": "Budi Santoso" },
+                  "timezone": { "type": "string", "default": "Asia/Makassar", "example": "Asia/Makassar" }
+                },
+                "required": ["email", "password", "display_name"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "tokens": { "$ref": "#/components/schemas/AuthTokens" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/400ValidationError" },
+          "409": { "$ref": "#/components/responses/409Conflict" }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User Login",
+        "description": "Authenticates with email and password to receive access token and refresh token.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "budi@example.com" },
+                  "password": { "type": "string", "example": "SuperSecret123!" },
+                  "device_name": { "type": "string", "example": "iPhone 15 Pro" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "tokens": { "$ref": "#/components/schemas/AuthTokens" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Refresh Token Rotation",
+        "description": "Refreshes access token and rotates valid refresh token cookie (httpOnly refreshToken cookie automatically read).",
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthTokens" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User Logout",
+        "description": "Revokes active refresh token session on the server and clears httpOnly refreshToken cookie.",
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Logout successful. Session revoked." }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Active User Profile",
+        "description": "Retrieves profile data of currently authenticated user including primary avatar image.",
+        "responses": {
+          "200": {
+            "description": "User profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "primary_profile_image": { "$ref": "#/components/schemas/MediaAsset" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      },
+      "patch": {
+        "tags": ["Profile"],
+        "summary": "Update Profile & Preferences",
+        "description": "Updates display name, timezone, or default currency code preference.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "display_name": { "type": "string", "example": "Budi Santoso Updated" },
+                  "timezone": { "type": "string", "example": "Asia/Jakarta" },
+                  "currency_code": { "type": "string", "example": "IDR" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/users/me": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Active User Profile (Alias)",
+        "description": "Alias for /v1/me. Retrieves profile data of currently authenticated user.",
+        "responses": {
+          "200": {
+            "description": "User profile data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" },
+                    "primary_profile_image": { "$ref": "#/components/schemas/MediaAsset" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      },
+      "patch": {
+        "tags": ["Profile"],
+        "summary": "Update Profile & Preferences (Alias)",
+        "description": "Alias for /v1/me. Updates display name, timezone, or default currency code preference.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "display_name": { "type": "string", "example": "Budi Santoso Updated" },
+                  "timezone": { "type": "string", "example": "Asia/Jakarta" },
+                  "currency_code": { "type": "string", "example": "IDR" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/users/me/avatar": {
+      "post": {
+        "tags": ["Profile"],
+        "summary": "Update Profile Primary Avatar",
+        "description": "Uploads a new avatar image directly or links an existing media asset ID to set as primary profile picture.",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "Avatar image file" }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "media_asset_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "avatar_url": { "type": "string", "example": "https://res.cloudinary.com/example/image.png" },
+                    "media_asset": { "$ref": "#/components/schemas/MediaAsset" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/400ValidationError" },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/accounts": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "List Accounts & Balances",
+        "description": "Retrieves list of all user accounts and current total balance.",
+        "responses": {
+          "200": {
+            "description": "List of user accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total_balance": { "type": "integer", "example": 17850000 },
+                    "accounts": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Account" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Accounts"],
+        "summary": "Create New Account",
+        "description": "Creates a new account (CASH, BANK, or EWALLET) with opening balance.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "BCA Utama" },
+                  "type": { "type": "string", "enum": ["CASH", "BANK", "EWALLET"], "example": "BANK" },
+                  "institution_name": { "type": "string", "example": "BCA" },
+                  "opening_balance": { "type": "integer", "default": 0, "example": 10000000 },
+                  "color": { "type": "string", "example": "#3B82F6" },
+                  "icon": { "type": "string", "example": "credit-card" }
+                },
+                "required": ["name", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Account created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/400ValidationError" },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/accounts/{id}": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Account Details",
+        "description": "Retrieves specific account details by ID.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Accounts"],
+        "summary": "Update Account",
+        "description": "Updates account name, institution name, color, or icon.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "institution_name": { "type": "string" },
+                  "color": { "type": "string" },
+                  "icon": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      }
+    },
+    "/v1/accounts/{id}/archive": {
+      "post": {
+        "tags": ["Accounts"],
+        "summary": "Archive Account",
+        "description": "Archives an account that is no longer active. Accounts are not permanently deleted to keep transaction ledger history consistent.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account archived successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      }
+    },
+    "/v1/transactions": {
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "Transaction History",
+        "description": "Retrieves user transactions list with date range, type, account, and keyword search filters.",
+        "parameters": [
+          { "name": "start_date", "in": "query", "description": "Format YYYY-MM-DD", "schema": { "type": "string" } },
+          { "name": "end_date", "in": "query", "description": "Format YYYY-MM-DD", "schema": { "type": "string" } },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["INCOME", "EXPENSE"] } },
+          { "name": "account_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "search", "in": "query", "description": "Search keyword for source name, note, or item name", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "transactions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Transaction" }
+                    },
+                    "next_cursor": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Transactions"],
+        "summary": "Create New Transaction",
+        "description": "Records income (INCOME) or expense (EXPENSE). Expenses require at least 1 item. Idempotency-Key header is required.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Unique request key to prevent duplicate transactions",
+            "schema": { "type": "string", "example": "tx_req_uuid_12345" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["INCOME", "EXPENSE"], "example": "EXPENSE" },
+                  "account_id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a001-000000000102" },
+                  "amount": { "type": "integer", "description": "Required for INCOME. For EXPENSE calculated from total items if left empty", "example": 36000 },
+                  "source_name": { "type": "string", "description": "Required if type=INCOME", "example": "Monthly Salary" },
+                  "occurred_at": { "type": "string", "format": "date-time" },
+                  "note": { "type": "string", "example": "Morning coffee before work" },
+                  "items": {
+                    "type": "array",
+                    "description": "Requires at least 1 item if type=EXPENSE",
+                    "items": { "$ref": "#/components/schemas/ExpenseItemInput" }
+                  },
+                  "location": { "$ref": "#/components/schemas/Location" },
+                  "attachment_ids": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "uuid" },
+                    "maxItems": 5
+                  }
+                },
+                "required": ["type", "account_id", "occurred_at"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/400ValidationError" },
+          "401": { "$ref": "#/components/responses/401Unauthorized" }
+        }
+      }
+    },
+    "/v1/transactions/{id}": {
+      "get": {
+        "tags": ["Transactions"],
+        "summary": "Transaction Details",
+        "description": "Retrieves full transaction details including items, location, and attachments.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Transactions"],
+        "summary": "Edit Transaction",
+        "description": "Updates transaction data, items, or attachments.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "occurred_at": { "type": "string", "format": "date-time" },
+                  "note": { "type": "string" },
+                  "source_name": { "type": "string" },
+                  "items": {
+                    "type": "array",
+                    "items": { "$ref": "#/components/schemas/ExpenseItemInput" }
+                  },
+                  "location": { "$ref": "#/components/schemas/Location" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction updated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Transactions"],
+        "summary": "Delete Transaction (Soft Delete)",
+        "description": "Marks transaction as deleted (deleted_at). Account balance is automatically recomputed.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Transaction deleted successfully." }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/404NotFound" }
+        }
+      }
+    },
+    "/v1/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard & Calendar"],
+        "summary": "Monthly Dashboard Summary",
+        "description": "Returns current total balance, balance per account, and current month total income & expense.",
+        "parameters": [
+          { "name": "month", "in": "query", "description": "Format YYYY-MM (default: current month)", "schema": { "type": "string", "example": "2026-08" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total_balance": { "type": "integer", "example": 17850000 },
+                    "monthly_income": { "type": "integer", "example": 18700000 },
+                    "monthly_expense": { "type": "integer", "example": 3545000 },
+                    "net_cashflow": { "type": "integer", "example": 15155000 },
+                    "accounts": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Account" }
+                    },
+                    "recent_transactions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Transaction" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calendar": {
+      "get": {
+        "tags": ["Dashboard & Calendar"],
+        "summary": "Monthly Calendar Aggregation",
+        "description": "Returns per-date indicator list for calendar display (GREEN: Income > Expense, RED: Expense > Income, NEUTRAL: Equal/None).",
+        "parameters": [
+          { "name": "month", "in": "query", "required": true, "description": "Format YYYY-MM", "schema": { "type": "string", "example": "2026-08" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Monthly calendar indicator data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "month": { "type": "string", "example": "2026-08" },
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": { "type": "string", "format": "date", "example": "2026-08-15" },
+                          "indicator": { "type": "string", "enum": ["GREEN", "RED", "NEUTRAL"], "example": "GREEN" },
+                          "total_income": { "type": "integer", "example": 3500000 },
+                          "total_expense": { "type": "integer", "example": 280000 },
+                          "transaction_count": { "type": "integer", "example": 2 }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/calendar/{date}": {
+      "get": {
+        "tags": ["Dashboard & Calendar"],
+        "summary": "Specific Date Summary & Transactions",
+        "description": "Retrieves transactions and cash flow summary for a specific date.",
+        "parameters": [
+          { "name": "date", "in": "path", "required": true, "description": "Format YYYY-MM-DD", "schema": { "type": "string", "example": "2026-08-15" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Day transaction details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": { "type": "string", "format": "date" },
+                    "total_income": { "type": "integer" },
+                    "total_expense": { "type": "integer" },
+                    "net_difference": { "type": "integer" },
+                    "transactions": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Transaction" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/upload-url": {
+      "post": {
+        "tags": ["Attachments"],
+        "summary": "Request Presigned Upload URL",
+        "description": "Requests Cloudinary presigned upload URL for receipt attachments or profile picture.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": { "type": "string", "example": "receipt_grocery.png" },
+                  "mime_type": { "type": "string", "example": "image/png" },
+                  "size_bytes": { "type": "integer", "maximum": 10485760, "example": 520000 }
+                },
+                "required": ["filename", "mime_type", "size_bytes"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload URL created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "media_asset_id": { "type": "string", "format": "uuid" },
+                    "upload_url": { "type": "string" },
+                    "fields": { "type": "object" },
+                    "expires_at": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/{id}/complete": {
+      "post": {
+        "tags": ["Attachments"],
+        "summary": "Confirm Upload Complete",
+        "description": "Marks media asset as UPLOADED after Cloudinary upload completes.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider_asset_id": { "type": "string" },
+                  "bytes": { "type": "integer" },
+                  "width": { "type": "integer" },
+                  "height": { "type": "integer" },
+                  "format": { "type": "string" },
+                  "secure_url": { "type": "string" }
+                },
+                "required": ["provider_asset_id", "bytes", "format"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload confirmed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MediaAsset" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/attachments/{id}": {
+      "delete": {
+        "tags": ["Attachments"],
+        "summary": "Delete Attachment",
+        "description": "Deletes user attachment.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Attachment deleted successfully." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token obtained after login or registration."
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a000-000000000001" },
+          "email": { "type": "string", "format": "email", "example": "budi@example.com" },
+          "display_name": { "type": "string", "example": "Budi Santoso" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"], "default": "USER", "example": "ADMIN" },
+          "timezone": { "type": "string", "example": "Asia/Makassar" },
+          "currency_code": { "type": "string", "example": "IDR" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "email", "display_name", "role", "timezone", "currency_code", "created_at", "updated_at"]
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a001-000000000102" },
+          "user_id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a000-000000000001" },
+          "name": { "type": "string", "example": "BCA Utama" },
+          "type": { "type": "string", "enum": ["CASH", "BANK", "EWALLET"], "example": "BANK" },
+          "institution_name": { "type": ["string", "null"], "example": "BCA" },
+          "opening_balance": { "type": "integer", "description": "Opening balance in whole Rupiah (BIGINT)", "example": 12500000 },
+          "current_balance": { "type": "integer", "description": "Calculated balance: opening_balance + income - expense", "example": 15750000 },
+          "color": { "type": ["string", "null"], "example": "#3B82F6" },
+          "icon": { "type": ["string", "null"], "example": "credit-card" },
+          "is_archived": { "type": "boolean", "default": false },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "user_id", "name", "type", "opening_balance", "current_balance", "is_archived", "created_at", "updated_at"]
+      },
+      "ExpenseItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a004-000000000001" },
+          "transaction_id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a003-000000000001" },
+          "name": { "type": "string", "example": "Iced Palm Sugar Coffee" },
+          "quantity": { "type": "number", "example": 2 },
+          "unit_price": { "type": "integer", "example": 18000 },
+          "line_total": { "type": "integer", "description": "Generated: ROUND(quantity * unit_price)", "example": 36000 },
+          "sort_order": { "type": "integer", "example": 0 }
+        },
+        "required": ["id", "transaction_id", "name", "quantity", "unit_price", "line_total", "sort_order"]
+      },
+      "ExpenseItemInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Iced Palm Sugar Coffee" },
+          "quantity": { "type": "number", "minimum": 0.001, "example": 2 },
+          "unit_price": { "type": "integer", "minimum": 0, "example": 18000 }
+        },
+        "required": ["name", "quantity", "unit_price"]
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Sudirman Coffee Shop" },
+          "latitude": { "type": "number", "minimum": -90, "maximum": 90, "example": -6.2088 },
+          "longitude": { "type": "number", "minimum": -180, "maximum": 180, "example": 106.8456 }
+        },
+        "required": ["name"]
+      },
+      "MediaAsset": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "owner_user_id": { "type": "string", "format": "uuid" },
+          "provider": { "type": "string", "example": "CLOUDINARY" },
+          "public_id": { "type": "string", "example": "financare/attachments/receipt_123" },
+          "resource_type": { "type": "string", "enum": ["image", "raw"] },
+          "delivery_type": { "type": "string", "enum": ["upload", "private", "authenticated"] },
+          "format": { "type": ["string", "null"], "example": "png" },
+          "original_filename": { "type": "string", "example": "grocery_receipt.png" },
+          "mime_type": { "type": "string", "example": "image/png" },
+          "bytes": { "type": ["integer", "null"], "example": 520000 },
+          "secure_url": { "type": ["string", "null"], "example": "https://res.cloudinary.com/example/image.png" },
+          "status": { "type": "string", "enum": ["PENDING", "UPLOADED", "ATTACHED", "DELETE_PENDING", "DELETED", "FAILED"], "example": "ATTACHED" }
+        },
+        "required": ["id", "owner_user_id", "provider", "public_id", "resource_type", "delivery_type", "original_filename", "mime_type", "status"]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "00000000-0000-4000-a003-000000000001" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "account_id": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["INCOME", "EXPENSE"], "example": "EXPENSE" },
+          "amount": { "type": "integer", "description": "Total transaction amount in whole Rupiah (BIGINT)", "example": 36000 },
+          "source_name": { "type": ["string", "null"], "description": "Required for INCOME", "example": null },
+          "occurred_at": { "type": "string", "format": "date-time" },
+          "note": { "type": ["string", "null"], "example": "Morning coffee before work" },
+          "location_name": { "type": ["string", "null"], "example": "Sudirman Coffee Shop" },
+          "latitude": { "type": ["number", "null"], "example": -6.2088 },
+          "longitude": { "type": ["number", "null"], "example": 106.8456 },
+          "idempotency_key": { "type": "string", "example": "seed-tx-budi-001" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ExpenseItem" }
+          },
+          "attachments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/MediaAsset" }
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "deleted_at": { "type": ["string", "null"], "format": "date-time" }
+        },
+        "required": ["id", "user_id", "account_id", "type", "amount", "occurred_at", "idempotency_key", "created_at", "updated_at"]
+      },
+      "AuthTokens": {
+        "type": "object",
+        "description": "Access token credentials returned after authentication. The refresh token is securely set in an httpOnly cookie named refreshToken.",
+        "properties": {
+          "access_token": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          "token_type": { "type": "string", "example": "Bearer" },
+          "expires_in": { "type": "integer", "example": 3600 }
+        },
+        "required": ["access_token", "token_type", "expires_in"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string", "example": "VALIDATION_ERROR" },
+              "message": { "type": "string", "example": "The submitted payload is invalid." },
+              "fields": {
+                "type": "object",
+                "additionalProperties": { "type": "string" },
+                "example": { "items.0.name": "Item name is required." }
+              },
+              "request_id": { "type": "string", "example": "req_018f98a2" }
+            },
+            "required": ["code", "message", "request_id"]
+          }
+        },
+        "required": ["error"]
+      }
+    },
+    "responses": {
+      "400ValidationError": {
+        "description": "Validation Error / Invalid Payload",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "401Unauthorized": {
+        "description": "Unauthorized / Session Expired",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "404NotFound": {
+        "description": "Resource Not Found / Access Denied",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "409Conflict": {
+        "description": "Resource Conflict (e.g. Email already registered)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    }
+  }
+}
