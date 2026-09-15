@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
+import { useTransactionsQuery } from "@/hooks/use-transactions"
 import { cn } from "@/lib/utils"
-import { mockTransactions } from "@/mocks/transactions"
 import moment from "moment"
 
 type CalendarDayProps = {
@@ -18,23 +18,23 @@ export default function DayCalendar({
 }: CalendarDayProps) {
   if (!date) return null
 
-  const hasIncome =
-    mockTransactions.filter((item) => {
-      return (
-        item.type === "INCOME" &&
-        moment(item.occurredAt).format("YYYY-MM-DD") ===
-          moment(date).format("YYYY-MM-DD")
-      )
-    }).length > 0
+  const startDate = new Date(
+    `${moment(date).format("YYYY-MM-DD")}T00:00:00`
+  ).toISOString()
+  const endDate = new Date(
+    `${moment(date).format("YYYY-MM-DD")}T23:59:59.999`
+  ).toISOString()
 
-  const hasExpenses =
-    mockTransactions.filter((item) => {
-      return (
-        item.type === "EXPENSE" &&
-        moment(item.occurredAt).format("YYYY-MM-DD") ===
-          moment(date).format("YYYY-MM-DD")
-      )
-    }).length > 0
+  const { data: incomes, isLoading: loadingIncomes } = useTransactionsQuery({
+    type: "INCOME",
+    start_date: startDate,
+    end_date: endDate,
+  })
+  const { data: expenses, isLoading: loadingExpenses } = useTransactionsQuery({
+    type: "EXPENSE",
+    start_date: startDate,
+    end_date: endDate,
+  })
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -46,10 +46,18 @@ export default function DayCalendar({
       >
         <p>{date.getDate()}</p>
       </Button>
-      {(hasIncome || hasExpenses) && (
+      {!loadingIncomes && !loadingExpenses && (
         <div className="items-center justify-center gap-1">
-          {hasIncome && <span className="text-primary">●</span>}
-          {hasExpenses && <span className="text-muted-foreground">●</span>}
+          {incomes &&
+            incomes.transactions &&
+            incomes.transactions.length > 0 && (
+              <span className="text-primary">●</span>
+            )}
+          {expenses &&
+            expenses.transactions &&
+            expenses.transactions.length > 0 && (
+              <span className="text-muted-foreground">●</span>
+            )}
         </div>
       )}
     </div>

@@ -14,7 +14,6 @@ import attachmentsRoutes from "./routes/attachments.routes";
 import usersRoutes from "./routes/users.routes";
 import dashboardRoutes from "./routes/dashboard.routes";
 import sourceMapSupport from "source-map-support";
-import env from "./configs/env";
 
 sourceMapSupport.install();
 
@@ -26,7 +25,13 @@ app.use(
   cors({
     origin: "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Idempotency-Key",
+      "idempotency-key"
+    ],
     credentials: true
   })
 );

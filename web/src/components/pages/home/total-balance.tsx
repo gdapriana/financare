@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { useDashboardSummaryQuery } from "@/hooks/use-dashboard"
 import { priceFormatter } from "@/lib/utils"
 import { useBalanceStore } from "@/store/balance-store"
 import {
@@ -10,14 +11,32 @@ import {
   Upload03FreeIcons,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect } from "react"
 
 export default function TotalBalance() {
   const hideBalance = useBalanceStore((state) => state.hideBalance)
   const setHideBalance = useBalanceStore((state) => state.setHideBalance)
   const totalBalance = useBalanceStore((state) => state.totalBalance)
+  const setTotalBalance = useBalanceStore((state) => state.setTotalBalance)
   const currency = useBalanceStore((state) => state.currency)
   const expenses = useBalanceStore((state) => state.expensesThisMonth)
+  const setExpenses = useBalanceStore((state) => state.setExpensesThisMonth)
   const inceome = useBalanceStore((state) => state.incomeThisMonth)
+  const setIncome = useBalanceStore((state) => state.setIncomeThisMonth)
+
+  const { data: summary, isLoading, refetch } = useDashboardSummaryQuery()
+
+  useEffect(() => {
+    refetch()
+  }, [])
+
+  useEffect(() => {
+    if (!isLoading && summary) {
+      setTotalBalance(summary.total_balance)
+      setIncome(summary.monthly_income)
+      setExpenses(summary.monthly_expense)
+    }
+  }, [summary, isLoading])
 
   return (
     <div className="container">
@@ -37,7 +56,7 @@ export default function TotalBalance() {
               />
             </Button>
           </div>
-          {hideBalance ? (
+          {hideBalance && !isLoading ? (
             <HugeiconsIcon className="text-background" icon={EllipsisIcon} />
           ) : (
             <h1 className="text-2xl font-semibold text-background">
@@ -55,7 +74,7 @@ export default function TotalBalance() {
             </Button>
           </div>
         </div>
-        <div className="flex flex-col items-start justify-center gap-2 rounded-4xl bg-primary/10 p-8">
+        <div className="flex flex-col items-start justify-center gap-2 rounded-4xl bg-primary/5 p-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted-foreground/20">
             <HugeiconsIcon icon={Download03FreeIcons} />
           </div>
@@ -70,7 +89,7 @@ export default function TotalBalance() {
             Income this month
           </span>
         </div>
-        <div className="flex flex-col items-start justify-center gap-2 rounded-4xl bg-primary/10 p-8">
+        <div className="flex flex-col items-start justify-center gap-2 rounded-4xl bg-primary/5 p-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted-foreground/20">
             <HugeiconsIcon icon={Upload03FreeIcons} />
           </div>

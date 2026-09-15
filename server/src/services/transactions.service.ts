@@ -1,5 +1,16 @@
 import crypto from "crypto";
-import { eq, and, sql, isNull, desc, gte, lte, ilike, or, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  sql,
+  isNull,
+  desc,
+  gte,
+  lte,
+  ilike,
+  or,
+  inArray
+} from "drizzle-orm";
 import db from "../configs/db";
 import {
   transactionsTable,
@@ -66,9 +77,10 @@ export const formatExpenseItem = (item: ExpenseItemSelect) => {
     name: item.name,
     quantity: Number(item.quantity),
     unit_price: item.unitPrice,
-    line_total: item.lineTotal !== null && item.lineTotal !== undefined
-      ? item.lineTotal
-      : Math.round(Number(item.quantity) * item.unitPrice),
+    line_total:
+      item.lineTotal !== null && item.lineTotal !== undefined
+        ? item.lineTotal
+        : Math.round(Number(item.quantity) * item.unitPrice),
     sort_order: item.sortOrder
   };
 };
@@ -136,11 +148,15 @@ export const getUserTransactions = async (
   }
 
   if (filters.start_date) {
-    conditions.push(gte(transactionsTable.occurredAt, new Date(filters.start_date)));
+    conditions.push(
+      gte(transactionsTable.occurredAt, new Date(filters.start_date))
+    );
   }
 
   if (filters.end_date) {
-    conditions.push(lte(transactionsTable.occurredAt, new Date(filters.end_date)));
+    conditions.push(
+      lte(transactionsTable.occurredAt, new Date(filters.end_date))
+    );
   }
 
   if (filters.search) {
@@ -154,11 +170,12 @@ export const getUserTransactions = async (
     );
   }
 
-  const transactions: TransactionSelect[] = await db.query.transactionsTable.findMany({
-    where: and(...conditions),
-    orderBy: [desc(transactionsTable.occurredAt), desc(transactionsTable.id)],
-    limit: limit + 1
-  });
+  const transactions: TransactionSelect[] =
+    await db.query.transactionsTable.findMany({
+      where: and(...conditions),
+      orderBy: [desc(transactionsTable.occurredAt), desc(transactionsTable.id)],
+      limit: limit + 1
+    });
 
   let nextCursor: string | null = null;
   if (transactions.length > limit) {
@@ -166,7 +183,7 @@ export const getUserTransactions = async (
     nextCursor = nextItem ? nextItem.id : null;
   }
 
-  const txIds = transactions.map((t) => t.id);
+  const txIds = transactions.map(t => t.id);
   let allItems: ExpenseItemSelect[] = [];
   if (txIds.length > 0) {
     allItems = await db.query.expenseItemsTable.findMany({
@@ -175,8 +192,8 @@ export const getUserTransactions = async (
     });
   }
 
-  const formattedTransactions = transactions.map((tx) => {
-    const txItems = allItems.filter((i) => i.transactionId === tx.id);
+  const formattedTransactions = transactions.map(tx => {
+    const txItems = allItems.filter(i => i.transactionId === tx.id);
     return formatTransaction(tx, txItems, []);
   });
 
@@ -222,20 +239,23 @@ export const createTransaction = async (
       });
       return formatTransaction(existingTx, items, []);
     }
-    throw ApiError.conflict("Idempotency key reused with different request payload.");
+    throw ApiError.conflict(
+      "Idempotency key reused with different request payload."
+    );
   }
 
   let computedAmount = dto.amount || 0;
   if (dto.type === "EXPENSE" && dto.items && dto.items.length > 0) {
     computedAmount = dto.items.reduce(
-      (sum, item) => sum + Math.round(Number(item.quantity) * Number(item.unit_price)),
+      (sum, item) =>
+        sum + Math.round(Number(item.quantity) * Number(item.unit_price)),
       0
     );
   }
 
   const occurredAtDate = new Date(dto.occurred_at);
 
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(async tx => {
     const [newTx] = await tx
       .insert(transactionsTable)
       .values({
@@ -243,12 +263,22 @@ export const createTransaction = async (
         accountId: dto.account_id,
         type: dto.type,
         amount: computedAmount,
-        sourceName: dto.type === "INCOME" ? dto.source_name || null : null,
+        sourceName: dto.source_name,
         occurredAt: occurredAtDate,
         note: dto.note || null,
         locationName: dto.location ? dto.location.name : null,
-        latitude: dto.location && dto.location.latitude !== undefined && dto.location.latitude !== null ? String(dto.location.latitude) : null,
-        longitude: dto.location && dto.location.longitude !== undefined && dto.location.longitude !== null ? String(dto.location.longitude) : null,
+        latitude:
+          dto.location &&
+          dto.location.latitude !== undefined &&
+          dto.location.latitude !== null
+            ? String(dto.location.latitude)
+            : null,
+        longitude:
+          dto.location &&
+          dto.location.longitude !== undefined &&
+          dto.location.longitude !== null
+            ? String(dto.location.longitude)
+            : null,
         idempotencyKey,
         idempotencyRequestHash
       })
@@ -328,7 +358,7 @@ export const updateTransaction = async (
     throw ApiError.notFound("Transaction not found.");
   }
 
-  const result = await db.transaction(async (tx) => {
+  const result = await db.transaction(async tx => {
     let newAmount = existingTx.amount;
 
     if (existingTx.type === "EXPENSE" && dto.items && dto.items.length > 0) {
@@ -347,7 +377,8 @@ export const updateTransaction = async (
       );
 
       newAmount = dto.items.reduce(
-        (sum, item) => sum + Math.round(Number(item.quantity) * Number(item.unit_price)),
+        (sum, item) =>
+          sum + Math.round(Number(item.quantity) * Number(item.unit_price)),
         0
       );
     }
@@ -361,12 +392,25 @@ export const updateTransaction = async (
         ...(dto.source_name !== undefined && { sourceName: dto.source_name }),
         ...(dto.location && {
           locationName: dto.location.name,
-          latitude: dto.location.latitude !== undefined && dto.location.latitude !== null ? String(dto.location.latitude) : null,
-          longitude: dto.location.longitude !== undefined && dto.location.longitude !== null ? String(dto.location.longitude) : null
+          latitude:
+            dto.location.latitude !== undefined &&
+            dto.location.latitude !== null
+              ? String(dto.location.latitude)
+              : null,
+          longitude:
+            dto.location.longitude !== undefined &&
+            dto.location.longitude !== null
+              ? String(dto.location.longitude)
+              : null
         }),
         updatedAt: new Date()
       })
-      .where(and(eq(transactionsTable.id, transactionId), eq(transactionsTable.userId, userId)))
+      .where(
+        and(
+          eq(transactionsTable.id, transactionId),
+          eq(transactionsTable.userId, userId)
+        )
+      )
       .returning();
 
     const items = await tx.query.expenseItemsTable.findMany({
@@ -402,5 +446,10 @@ export const deleteTransaction = async (
       deletedAt: new Date(),
       updatedAt: new Date()
     })
-    .where(and(eq(transactionsTable.id, transactionId), eq(transactionsTable.userId, userId)));
+    .where(
+      and(
+        eq(transactionsTable.id, transactionId),
+        eq(transactionsTable.userId, userId)
+      )
+    );
 };

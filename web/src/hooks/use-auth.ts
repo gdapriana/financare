@@ -14,6 +14,27 @@ export function useMeQuery() {
   })
 }
 
+export function useRegisterMutation() {
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: authApi.register,
+    onSuccess: (res) => {
+      showToast({
+        title: "Register Successful",
+        description: `Welcome, ${res.data.user.display_name}!`,
+      })
+      navigate("/login", { replace: true })
+    },
+    onError: (err: any) => {
+      showToast({
+        title: "Register Failed",
+        description:
+          JSON.stringify(err.response?.data?.errors) || "Invalid credentials.",
+      })
+    },
+  })
+}
+
 export function useLoginMutation() {
   const setAuth = useAuthStore((state) => state.setAuth)
   const queryClient = useQueryClient()

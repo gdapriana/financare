@@ -75,4 +75,13 @@ export const accountsApi = {
     const res = await api.post<ApiResponse<Account>>(`/accounts/${id}/archive`)
     return res.data.data
   },
+
+  unarchiveAccount: async (id: string): Promise<Account> => {
+    const res = await api.post<ApiResponse<Account>>(`/accounts/${id}/unarchive`)
+    return res.data.data
+  },
+
+  deleteAccount: async (id: string): Promise<void> => {
+    await api.delete(`/accounts/${id}`)
+  },
 }

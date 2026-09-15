@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import { useLogoutMutation } from "@/hooks/use-auth"
 import type { ProfileMenuType } from "@/types/profile-menu"
 import {
   ArrowRight01FreeIcons,
@@ -32,6 +33,12 @@ const profileMenu: ProfileMenuType = [
 ]
 
 export default function ProfileMenu() {
+  const logoutMutation = useLogoutMutation()
+
+  const handleLogout = () => {
+    logoutMutation.mutate()
+  }
+
   return (
     <div className="container">
       <div className="mx-auto flex max-w-lg flex-col items-stretch justify-start gap-4">
@@ -58,7 +65,9 @@ export default function ProfileMenu() {
           </div>
         ))}
 
-        <Button size="lg">Log Out</Button>
+        <Button onClick={handleLogout} size="lg">
+          Log Out
+        </Button>
       </div>
     </div>
   )

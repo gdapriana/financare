@@ -16,14 +16,55 @@ import { Link } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Apple, GoogleIcon } from "@hugeicons/core-free-icons"
 import { showToast, templateToastComingSoon } from "@/lib/toast"
+import { useRegisterMutation } from "@/hooks/use-auth"
+import { useState } from "react"
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const [email, setEmail] = useState<string>("")
+  const [name, setName] = useState<string>("")
+  const [password, setPassword] = useState<{
+    originalPassword: string
+    confirmPassword: string
+  }>({ originalPassword: "", confirmPassword: "" })
+
+  const registerMutation = useRegisterMutation()
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    console.log({ name, email, password })
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.originalPassword.trim() ||
+      !password.confirmPassword.trim()
+    ) {
+      showToast({
+        title: "Validation Error",
+        description: "Please enter name, email and password.",
+      })
+      return
+    }
+    if (password.originalPassword !== password.confirmPassword) {
+      showToast({
+        title: "Validation Error",
+        description: "Password not match",
+      })
+      return
+    }
+    registerMutation.mutate({
+      email: email.trim(),
+      password: password.originalPassword,
+      display_name: name.trim(),
+      timezone: "Asia/Makasar",
+    })
+  }
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form>
+      <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
             <a
@@ -46,6 +87,7 @@ export function SignupForm({
               id="email"
               type="email"
               placeholder="m@example.com"
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </Field>
@@ -55,6 +97,7 @@ export function SignupForm({
               id="displayName"
               type="text"
               placeholder="John Doe"
+              onChange={(e) => setName(e.target.value)}
               required
             />
           </Field>
@@ -65,6 +108,12 @@ export function SignupForm({
                 id="password"
                 type="password"
                 placeholder="*********"
+                onChange={(e) =>
+                  setPassword((prev) => ({
+                    ...prev,
+                    originalPassword: e.target.value,
+                  }))
+                }
                 required
               />
             </Field>
@@ -75,6 +124,12 @@ export function SignupForm({
               <Input
                 id="confirmPassword"
                 type="password"
+                onChange={(e) =>
+                  setPassword((prev) => ({
+                    ...prev,
+                    confirmPassword: e.target.value,
+                  }))
+                }
                 placeholder="*********"
                 required
               />

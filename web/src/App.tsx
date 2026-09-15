@@ -9,6 +9,10 @@ import RegisterPage from "@/pages/auth/register"
 import Calendar from "@/pages/calendar"
 import Statistic from "@/pages/statistic"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import Transactions from "@/pages/transactions/transactions"
+import Income from "@/pages/transactions/income"
+import Expense from "@/pages/transactions/expense"
+import Accounts from "@/pages/accounts"
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +41,10 @@ export function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/statistic" element={<Statistic />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/transactions/income" element={<Income />} />
+          <Route path="/transactions/expense" element={<Expense />} />
+          <Route path="/accounts" element={<Accounts />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route element={<PublicRoute />}>

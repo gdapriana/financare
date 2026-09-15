@@ -4,7 +4,9 @@ import {
   createAccount,
   getAccountById,
   updateAccount,
-  archiveAccount
+  archiveAccount,
+  unarchiveAccount,
+  deleteAccount
 } from "../controllers/accounts.controller";
 import { authenticate, requireRole } from "../middlewares/auth.middleware";
 
@@ -16,6 +18,8 @@ accountsRouter.get("/", getAccounts);
 accountsRouter.post("/", createAccount);
 accountsRouter.get("/:id", getAccountById);
 accountsRouter.patch("/:id", updateAccount);
+accountsRouter.delete("/:id", deleteAccount);
 accountsRouter.post("/:id/archive", archiveAccount);
+accountsRouter.post("/:id/unarchive", unarchiveAccount);
 
 export default accountsRouter;

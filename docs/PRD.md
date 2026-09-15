@@ -621,6 +621,8 @@ server/
 | `GET` | `/v1/accounts/{id}` | Detail rekening |
 | `PATCH` | `/v1/accounts/{id}` | Mengubah rekening |
 | `POST` | `/v1/accounts/{id}/archive` | Mengarsipkan rekening |
+| `POST` | `/v1/accounts/{id}/unarchive` | Mengaktifkan kembali (unarchive) rekening |
+| `DELETE` | `/v1/accounts/{id}` | Menghapus rekening beserta seluruh transaksinya |
 
 ### 9.3 Transaksi
 

@@ -16,7 +16,7 @@ export default function SectionHeader({ title, cta }: SectionHeader) {
     <header className="flex items-center justify-between">
       <h3 className="font-bold">{title}</h3>
       {cta && (
-        <Button variant="link" render={<Link to={cta.url} />}>
+        <Button variant="secondary" render={<Link to={cta.url} />}>
           {cta.text} <HugeiconsIcon icon={cta.icon} />
         </Button>
       )}

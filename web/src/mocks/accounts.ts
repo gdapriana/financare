@@ -1,9 +1,12 @@
-import type { Account } from "@/types/account";
+import type { Account } from "@/types/account"
 
-import { mockIds } from "@/mocks/mock-ids";
+import { mockIds } from "@/mocks/mock-ids"
+import type { AccountType } from "@/services/accounts.api"
 
-const createdAt = "2026-01-10T09:15:00+08:00";
-const updatedAt = "2026-08-20T15:30:00+08:00";
+const createdAt = "2026-01-10T09:15:00+08:00"
+const updatedAt = "2026-08-20T15:30:00+08:00"
+
+export const mockAccountType: AccountType[] = ["BANK", "CASH", "EWALLET"]
 
 export const mockAccounts: Account[] = [
   {
@@ -71,4 +74,4 @@ export const mockAccounts: Account[] = [
     createdAt,
     updatedAt,
   },
-];
+]

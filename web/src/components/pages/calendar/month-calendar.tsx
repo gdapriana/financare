@@ -101,7 +101,6 @@ export default function MonthCalendar() {
     }
   }, [range.start])
 
-  // Handle scroll event: update active month title & infinite append/prepend
   const handleScroll = useCallback(() => {
     const container = containerRef.current
     if (!container) return
@@ -109,18 +108,15 @@ export default function MonthCalendar() {
     const { scrollLeft, scrollWidth, clientWidth } = container
     const scrollRight = scrollWidth - scrollLeft - clientWidth
 
-    // Infinite Prepend when scrolling near left boundary
     if (scrollLeft < 350) {
       prevScrollWidthRef.current = scrollWidth
       setRange((prev) => ({ ...prev, start: prev.start - 4 }))
     }
 
-    // Infinite Append when scrolling near right boundary
     if (scrollRight < 350) {
       setRange((prev) => ({ ...prev, end: prev.end + 4 }))
     }
 
-    // Find center visible month
     const containerCenter = scrollLeft + clientWidth / 2
     let closestOffset = 0
     let minDistance = Infinity
@@ -167,7 +163,6 @@ export default function MonthCalendar() {
     scrollToOffset(currentOffset)
   }
 
-  // Header Next Button Handler
   const handleNextMonth = () => {
     const currentOffset = Math.round(
       (visibleMonth.getFullYear() - baseMonth.getFullYear()) * 12 +
@@ -180,7 +175,6 @@ export default function MonthCalendar() {
     scrollToOffset(currentOffset)
   }
 
-  // Header Reset to Today Handler: Select today and center focus on today's date
   const handleResetToToday = () => {
     selectDate(getDateKey(today))
     const container = containerRef.current

@@ -90,3 +90,36 @@ export const archiveAccount = AsyncHandler(async (req: Request, res: Response) =
 
   return ApiResponse.ok(res, "Account archived successfully.", archivedAccount);
 });
+
+export const unarchiveAccount = AsyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized("Unauthorized");
+  }
+
+  const parsedParam = accountIdParamSchema.safeParse(req.params.id);
+  if (!parsedParam.success) {
+    throw ApiError.badRequest("Invalid account ID format.");
+  }
+
+  const unarchivedAccount = await accountsService.unarchiveAccount(
+    req.user.userId,
+    parsedParam.data
+  );
+
+  return ApiResponse.ok(res, "Account unarchived successfully.", unarchivedAccount);
+});
+
+export const deleteAccount = AsyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw ApiError.unauthorized("Unauthorized");
+  }
+
+  const parsedParam = accountIdParamSchema.safeParse(req.params.id);
+  if (!parsedParam.success) {
+    throw ApiError.badRequest("Invalid account ID format.");
+  }
+
+  await accountsService.deleteAccount(req.user.userId, parsedParam.data);
+
+  return ApiResponse.ok(res, "Account and associated transactions deleted successfully.", null);
+});

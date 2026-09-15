@@ -1,6 +1,11 @@
-import { eq, and, sql, isNull, desc } from "drizzle-orm";
+import { eq, and, sql, isNull, desc, inArray } from "drizzle-orm";
 import db from "../configs/db";
-import { accountsTable, transactionsTable } from "../drizzle";
+import {
+  accountsTable,
+  transactionsTable,
+  expenseItemsTable,
+  transactionAttachmentsTable
+} from "../drizzle";
 import { ApiError } from "../utils/api-error";
 
 export type AccountSelect = typeof accountsTable.$inferSelect;
@@ -196,4 +201,86 @@ export const archiveAccount = async (userId: string, accountId: string) => {
   );
 
   return formatAccount(archivedAccount, currentBalance);
+};
+
+export const unarchiveAccount = async (userId: string, accountId: string) => {
+  const existingAccount = await db.query.accountsTable.findFirst({
+    where: and(
+      eq(accountsTable.id, accountId),
+      eq(accountsTable.userId, userId)
+    )
+  });
+
+  if (!existingAccount) {
+    throw ApiError.notFound("Account not found.");
+  }
+
+  const [unarchivedAccount] = await db
+    .update(accountsTable)
+    .set({
+      isArchived: false,
+      updatedAt: new Date()
+    })
+    .where(and(eq(accountsTable.id, accountId), eq(accountsTable.userId, userId)))
+    .returning();
+
+  const currentBalance = await calculateAccountBalance(
+    userId,
+    unarchivedAccount.id,
+    unarchivedAccount.openingBalance
+  );
+
+  return formatAccount(unarchivedAccount, currentBalance);
+};
+
+export const deleteAccount = async (userId: string, accountId: string) => {
+  const existingAccount = await db.query.accountsTable.findFirst({
+    where: and(
+      eq(accountsTable.id, accountId),
+      eq(accountsTable.userId, userId)
+    )
+  });
+
+  if (!existingAccount) {
+    throw ApiError.notFound("Account not found.");
+  }
+
+  await db.transaction(async (tx) => {
+    const userTxs = await tx.query.transactionsTable.findMany({
+      where: and(
+        eq(transactionsTable.accountId, accountId),
+        eq(transactionsTable.userId, userId)
+      )
+    });
+
+    if (userTxs.length > 0) {
+      const txIds = userTxs.map((t) => t.id);
+
+      await tx
+        .delete(expenseItemsTable)
+        .where(inArray(expenseItemsTable.transactionId, txIds));
+
+      await tx
+        .delete(transactionAttachmentsTable)
+        .where(inArray(transactionAttachmentsTable.transactionId, txIds));
+
+      await tx
+        .delete(transactionsTable)
+        .where(
+          and(
+            eq(transactionsTable.accountId, accountId),
+            eq(transactionsTable.userId, userId)
+          )
+        );
+    }
+
+    await tx
+      .delete(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.id, accountId),
+          eq(accountsTable.userId, userId)
+        )
+      );
+  });
 };

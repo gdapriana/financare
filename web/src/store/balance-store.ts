@@ -15,9 +15,9 @@ interface BalanceState {
 
 export const useBalanceStore = create<BalanceState>((set) => ({
   currency: "IDR",
-  totalBalance: 20000000,
-  expensesThisMonth: 500000,
-  incomeThisMonth: 200000,
+  totalBalance: 0,
+  expensesThisMonth: 0,
+  incomeThisMonth: 0,
   hideBalance: false,
   setTotalBalance: (val) => set(() => ({ totalBalance: val })),
   setIncomeThisMonth: (val) => set(() => ({ incomeThisMonth: val })),
